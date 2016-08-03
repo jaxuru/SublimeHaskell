@@ -1243,50 +1243,52 @@ class HsDevAgent(threading.Thread):
             if get_setting_async('enable_hsdev') and not self.client.ping():
                 log('hsdev ping: no pong', log_warning)
 
-            scan_paths = []
-            with self.dirty_paths as dirty_paths:
-                scan_paths = dirty_paths[:]
-                dirty_paths[:] = []
+            location = self.view.sel()[0].begin()
+            if self.view.match_selector(location, 'source.cs')
+                scan_paths = []
+                with self.dirty_paths as dirty_paths:
+                    scan_paths = dirty_paths[:]
+                    dirty_paths[:] = []
 
-            files_to_reinspect = []
-            with self.dirty_files as dirty_files:
-                files_to_reinspect = dirty_files[:]
-                dirty_files[:] = []
+                files_to_reinspect = []
+                with self.dirty_files as dirty_files:
+                    files_to_reinspect = dirty_files[:]
+                    dirty_files[:] = []
 
-            projects = []
-            files = []
-
-            if len(files_to_reinspect) > 0:
                 projects = []
                 files = []
-                for f in files_to_reinspect:
-                    d = get_cabal_project_dir_of_file(f)
-                    if d is not None:
-                        projects.append(d)
-                    else:
-                        files.append(f)
 
-            projects = list(set(projects))
-            files = list(set(files))
+                if len(files_to_reinspect) > 0:
+                    projects = []
+                    files = []
+                    for f in files_to_reinspect:
+                        d = get_cabal_project_dir_of_file(f)
+                        if d is not None:
+                            projects.append(d)
+                        else:
+                            files.append(f)
 
-            try:
-                self.inspect(paths = scan_paths, projects = projects, files = files)
-            except Exception as e:
-                log('HsDevAgent inspect exception: {0}'.format(e))
+                projects = list(set(projects))
+                files = list(set(files))
 
-            load_cabal = []
-            with self.cabal_to_load as cabal_to_load:
-                load_cabal = cabal_to_load[:]
-                cabal_to_load[:] = []
+                try:
+                    self.inspect(paths = scan_paths, projects = projects, files = files)
+                except Exception as e:
+                    log('HsDevAgent inspect exception: {0}'.format(e))
 
-            for c in load_cabal:
-                run_async('inspect cabal {0}'.format(c), self.inspect_cabal, c)
+                load_cabal = []
+                with self.cabal_to_load as cabal_to_load:
+                    load_cabal = cabal_to_load[:]
+                    cabal_to_load[:] = []
 
-            if files_to_reinspect:
-                if get_setting_async('enable_hdocs'):
-                    self.client_back.docs(files = files_to_reinspect)
-            self.reinspect_event.wait(HsDevAgent.sleep_timeout)
-            self.reinspect_event.clear()
+                for c in load_cabal:
+                    run_async('inspect cabal {0}'.format(c), self.inspect_cabal, c)
+
+                if files_to_reinspect:
+                    if get_setting_async('enable_hdocs'):
+                        self.client_back.docs(files = files_to_reinspect)
+                self.reinspect_event.wait(HsDevAgent.sleep_timeout)
+                self.reinspect_event.clear()
 
     @dirty
     def force_inspect(self):
